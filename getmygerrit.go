@@ -23,6 +23,8 @@ func main() {
 		Number   int    `json:"_number"`
 	}
 
+	webContent := map[string][]string{}
+
 	cfg, err := ini.Load("config/repos.ini")
 	if err != nil {
 		fmt.Printf("Fail to read file: %v", err)
@@ -64,8 +66,10 @@ func main() {
 				}
 				for _, myPatch := range myPatches {
 					fmt.Println("Response: ", section, url+"/"+fmt.Sprint(myPatch.Number))
+					webContent[cfg.Section(section).Name()] = append(webContent[cfg.Section(section).Name()], (url + "/" + fmt.Sprint(myPatch.Number)))
 				}
 			}
+			fmt.Println("FINISHED: ", webContent)
 		}
 	}
 }
