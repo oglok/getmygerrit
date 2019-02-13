@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +16,13 @@ func main() {
 	// different repos and show them in a single webpage with links to them.
 	fmt.Println("Welcome to GetMyGerrit")
 
+	// This struct represents the information fetch from Gerrit for one patch.
+	type PatchData struct {
+		ChangeID string `json:"change_id"`
+		Status   string `json:"status"`
+		Number   int    `json:"_number"`
+	}
+
 	cfg, err := ini.Load("config/repos.ini")
 	if err != nil {
 		fmt.Printf("Fail to read file: %v", err)
@@ -22,11 +30,9 @@ func main() {
 	}
 
 	// Classic read of values, default section can be represented as empty string
-	// fmt.Println("App Mode:", cfg.Section("").Key("app_mode").String())
-	fmt.Println("Hola", cfg.SectionStrings())
+	fmt.Println("Reading through the config file", cfg.SectionStrings())
 
-	sectionNames := cfg.SectionStrings()
-	for _, section := range sectionNames {
+	for _, section := range cfg.SectionStrings() {
 		fmt.Println("Ricky", section)
 		if cfg.Section(section).Name() != "DEFAULT" {
 			url := cfg.Section(section).Key("url").String()
@@ -41,16 +47,25 @@ func main() {
 				//handle error
 				fmt.Println("Wrong request")
 			}
-			fmt.Println("Great request:", req)
-			res, _ := http.DefaultClient.Do(req)
-
-			if res == nil {
-				fmt.Println("Booooh")
+			res, err := http.DefaultClient.Do(req)
+			if err != nil {
+				//handle error
+				fmt.Println("Wrong response")
+			} else {
+				defer res.Body.Close()
+				body, err := ioutil.ReadAll(res.Body)
+				if err != nil {
+					panic(err)
+				}
+				var myPatches []PatchData
+				err = json.Unmarshal(body[5:], &myPatches)
+				if err != nil {
+					fmt.Println(err)
+				}
+				for _, myPatch := range myPatches {
+					fmt.Println("Response: ", section, url+"/"+fmt.Sprint(myPatch.Number))
+				}
 			}
-			defer res.Body.Close()
-			body, _ := ioutil.ReadAll(res.Body)
-
-			fmt.Println(string(body))
 		}
 	}
 }
